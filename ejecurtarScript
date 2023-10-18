@@ -1,0 +1,9 @@
+@ECHO OFF
+CHCP 65001>NUL
+	
+call \activate.bat
+cd \ManejoCufes_v1
+python xlsxFilesManageFunctions.py
+
+exit 
+PAUSE > nul
