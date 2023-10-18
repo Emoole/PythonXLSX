@@ -1,0 +1,90 @@
+import pandas as pd
+import datetime
+import glob
+import shutil
+
+
+#Diccionario empresas
+company_paths={
+    '890905627':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/CB Consolidado.xlsx",
+    '800041829':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/YK Consolidado.xlsx",
+    '900329399':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/AL Consolidado.xlsx",
+    '890925058':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/DK Consolidado.xlsx",
+    '900188208':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/MK Consolidado.xlsx",
+    '900470946':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/AZ Consolidado.xlsx",
+    '890939998':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/CI Consolidado.xlsx",
+    '900780840':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/SF Consolidado.xlsx",
+    '8909240764':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/PL Consolidado.xlsx",
+    '901091271':"C:/Users/emonsalve/Downloads/ManejoCufes_v1/Consolidados/PS Consolidado.xlsx"
+}
+
+#Funcion para listar los archivos de una carpeta y guardarlos.
+def listFiles(folder):
+    files_xlsx=glob.glob(f'{folder}/*.xlsx')
+    return files_xlsx
+#Fin función Listar Archivos
+
+#Funcion Fecha Actual
+def now():
+    now=datetime.datetime.now()
+    return now.strftime("%Y-%m-%d")
+#Fin Funcion Fecha Actual
+
+#Utilizando la funcion listFiles()
+folder='Pendientes'
+fxlsx_list=listFiles(folder)
+print ("Archivos Pendientes: ", fxlsx_list)
+#Utilizando la funcion now
+now()
+
+#Archivo que se descarga de la DIAN
+#file='data.xlsx'
+
+for file in fxlsx_list:
+    #Columnas necesarias
+    cols=["CUFE/CUDE"]
+    #Leemos la data del archivo pendiente y casteamos los datos a string 
+    data=pd.read_excel(file).applymap(str)
+    #Lectura CompanyId
+    companyId=data.loc[0,'NIT Receptor']
+    #Filtro Factura Electronica
+    invoices=data[data['Tipo de documento']=='Factura electrónica']
+    #Seleccionamos las columnas que realmente necesitamos
+    invoices=invoices[cols]
+    #Renombramos la columna
+    invoices=invoices.rename(columns={'CUFE/CUDE':'CUFE'})
+    #Agregamos el lote a cada linea del df data
+    invoices['LOTE']=now()
+    #print(invoices)
+ 
+    #print(type(companyId))
+    
+    #Validamos si existe el id en el diccionario 'company_paths'
+    if companyId in company_paths:
+        path=company_paths[companyId]
+        print("Path Encontrado:", companyId,":", path)
+        
+        #Cargar Data Consolidado para la empresa solicitada
+        try:
+            dataConsolidate=pd.read_excel(path)
+            print(dataConsolidate)
+
+            dataConsolidate=dataConsolidate._append(invoices, ignore_index=True)
+            #Borra los duplicados del dataframe basado en las columnas EMPRESA Y CANTIDAD
+            dataConsolidate=dataConsolidate.drop_duplicates(subset=['CUFE'])
+            #print("Consolidado Final:", dataConsolidate)
+            #Lleva los datos a un excel. Consolidado seleccionado en el diccionario de paths
+            dataConsolidate=dataConsolidate.to_excel(path, index=False)
+            
+        except Exception as e:
+            print(f"Error al leer {path}: {str(e)}")
+            print(e)
+
+    else:
+        print("Path no encontrado:", companyId)
+    ##Movemos el archivo procesado
+    Origen=file
+    Destino="Procesados"
+    shutil.move(Origen,Destino)
+
+print("----------------Fin Ejecución--------------------")
